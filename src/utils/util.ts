@@ -1,10 +1,10 @@
-import { envs } from "../config/config.js";
+import { envs } from "@/config/config";
 import fs from "fs";
-import { ExtendedTool, LinkConnectionProps } from "../types/paragon-types.js";
+import { ExtendedTool, LinkConnectionProps } from "@/types/paragon-types";
 import jwt from "jsonwebtoken";
-import { getActions } from "./actionkit.js";
-import { UserNotConnectedError } from "../errors/errors.js";
-import { createAccessToken } from "../services/access-tokens.js";
+import { getActions } from "@/utils/actionkit";
+import { UserNotConnectedError } from "@/errors/errors";
+import { createAccessToken } from "@/services/access-tokens";
 
 export function getSigningKey(): string {
 	if (envs.SIGNING_KEY_PATH) {

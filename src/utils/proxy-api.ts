@@ -1,6 +1,6 @@
-import { envs } from "../config/config.js";
-import { ExtendedTool, Integration, ProxyApiRequestToolArgs } from "../types/paragon-types.js";
-import { handleResponseErrors } from "./util.js";
+import { envs } from "@/config/config";
+import { ExtendedTool, Integration, ProxyApiRequestToolArgs } from "@/types/paragon-types";
+import { handleResponseErrors } from "@/utils/util";
 
 export function createProxyApiTool(integrations: Integration[]): ExtendedTool {
 	const integrationNames = integrations.map((i) => i.type);

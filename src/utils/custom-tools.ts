@@ -1,6 +1,6 @@
-import { ExtendedTool } from "../types/paragon-types.js";
-import { envs } from "../config/config.js";
-import { handleResponseErrors } from "./util.js";
+import { ExtendedTool } from "@/types/paragon-types";
+import { envs } from "@/config/config";
+import { handleResponseErrors } from "@/utils/util";
 // @ts-ignore
 import { markdown } from 'markdown';
 // @ts-ignore

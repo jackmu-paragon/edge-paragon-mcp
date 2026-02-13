@@ -1,7 +1,7 @@
-import { envs } from "../config/config.js";
-import { ExtendedTool } from "../types/paragon-types.js";
-import { openApiRequests } from "./openapi.js";
-import { handleResponseErrors } from "./util.js";
+import { envs } from "@/config/config";
+import { ExtendedTool } from "@/types/paragon-types";
+import { openApiRequests } from "@/utils/openapi";
+import { handleResponseErrors } from "@/utils/util";
 import { OpenAPIV3 } from "openapi-types";
 
 export async function getActions(jwt: string): Promise<any | null> {

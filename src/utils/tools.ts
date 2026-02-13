@@ -2,19 +2,21 @@ import {
 	CallToolRequestSchema,
 	ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ExtendedTool, ProxyApiRequestToolArgs, TransportPayload } from "../types/paragon-types.js";
-import { decodeJwt, generateSetupLink, getTools } from "./util.js";
-import { envs } from "../config/config.js";
-import { performAction, performOpenApiAction } from "./actionkit.js";
-import { performCustomAction } from "./custom-tools.js";
-import { JsonResponseError, UserNotConnectedError } from "../errors/errors.js";
+import { ExtendedTool, ProxyApiRequestToolArgs } from "@/types/paragon-types";
+import { decodeJwt, generateSetupLink, getTools } from "@/utils/util";
+import { envs } from "@/config/config";
+import { performAction, performOpenApiAction } from "@/utils/actionkit";
+import { performCustomAction } from "@/utils/custom-tools";
+import { JsonResponseError, UserNotConnectedError } from "@/errors/errors";
 import AjvDefault from "ajv";
-import { performProxyApiRequest } from "./proxy.js";
+import { performProxyApiRequest } from "@/utils/proxy-api";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-const Ajv = (AjvDefault as any).default ?? AjvDefault;
 
+const Ajv = (AjvDefault as any).default ?? AjvDefault;
 const ajv = new Ajv({ allErrors: true, strict: false });
+
+// const toolsCache = new Map<string, { tools: ExtendedTool[]; expiresAt: number }>();
+// const CACHE_TTL_MS = 5 * 60 * 1000; 
 
 /**
  * Get tools from ActionKit API, append extraTools, and filter by integrations if specified in the environment variables
@@ -25,10 +27,15 @@ async function getAndProcessTools(
 	jwt: string,
 	extraTools: Array<ExtendedTool> = []
 ): Promise<Array<ExtendedTool>> {
+	// const cached = toolsCache.get(jwt);
+	// if (cached && cached.expiresAt > Date.now()) {
+	// 	return cached.tools;
+	// }
+	//
 	const dynamicTools = await getTools(jwt);
 	const allTools = dynamicTools.concat(extraTools);
 
-	return allTools.filter((tool) => {
+	const filteredTools = allTools.filter((tool) => {
 		let keep = true;
 		if (envs.LIMIT_TO_INTEGRATIONS && envs.LIMIT_TO_INTEGRATIONS.length > 0) {
 			keep = keep && envs.LIMIT_TO_INTEGRATIONS.includes(tool.integrationName);
@@ -38,47 +45,46 @@ async function getAndProcessTools(
 		}
 		return keep;
 	});
+
+	// toolsCache.set(jwt, {
+	// 	tools: filteredTools,
+	// 	expiresAt: Date.now() + CACHE_TTL_MS
+	// });
+	//
+	return filteredTools;
+}
+
+function getJwtFromExtra(extra: { authInfo?: { token: string } }): string {
+	const jwt = extra.authInfo?.token;
+	if (!jwt) {
+		throw new Error("No JWT found in request context. Ensure authInfo is passed to handleRequest.");
+	}
+	return jwt;
 }
 
 export function registerTools({
 	server,
 	extraTools = [],
-	transports,
 }: {
 	server: McpServer;
 	extraTools?: Array<ExtendedTool>;
-	transports: { [sessionId: string]: StreamableHTTPServerTransport };
 }) {
-	server.setRequestHandler(
+	server.server.setRequestHandler(
 		ListToolsRequestSchema,
-		async (_params, { sessionId }) => {
-			if (!sessionId || !transports[sessionId]) {
-				throw new Error(`No session found by ID: ${sessionId}`);
-			}
-			const sessionData = transports[sessionId];
-
-			if (sessionData.cachedTools) {
-				return { tools: sessionData.cachedTools };
-			}
-
-			const filteredTools = await getAndProcessTools(sessionData.currentJwt, extraTools);
-			transports[sessionId].cachedTools = filteredTools;
-			return { tools: filteredTools };
+		async (_params, extra) => {
+			const jwt = getJwtFromExtra(extra);
+			const tools = await getAndProcessTools(jwt, extraTools);
+			return { tools };
 		}
 	);
 
-	server.setRequestHandler(
+	server.server.setRequestHandler(
 		CallToolRequestSchema,
-		async (request, { sessionId }) => {
-			if (!sessionId || !transports[sessionId]) {
-				throw new Error(`No session found by ID: ${sessionId}`);
-			}
+		async (request, extra) => {
+			const jwt = getJwtFromExtra(extra);
 			const { name, arguments: args } = request.params;
-			const sessionData = transports[sessionId];
-			if (!sessionData.cachedTools) {
-				sessionData.cachedTools = await getAndProcessTools(sessionData.currentJwt, extraTools);
-			}
-			const dynamicTools = sessionData.cachedTools;
+
+			const dynamicTools = await getAndProcessTools(jwt, extraTools);
 			const tool = dynamicTools.find((t) => t.name === name);
 			if (!tool) {
 				throw new Error(`Tool not found: ${name}`);
@@ -108,24 +114,24 @@ export function registerTools({
 					response = await performOpenApiAction(
 						tool,
 						args as { params: any; body: any },
-						transports[sessionId].currentJwt
+						jwt
 					);
 				} else if (tool.name === "CALL_API_REQUEST") {
 					response = await performProxyApiRequest(
 						args as ProxyApiRequestToolArgs,
-						transports[sessionId].currentJwt
+						jwt
 					);
 				} else if (tool.name.split("_")[0] === "CUSTOM") {
 					response = await performCustomAction(
 						tool.name,
 						args,
-						transports[sessionId].currentJwt
+						jwt
 					);
 				} else {
 					response = await performAction(
 						tool.name,
 						args,
-						transports[sessionId].currentJwt
+						jwt
 					);
 				}
 
@@ -150,8 +156,7 @@ export function registerTools({
 				if (error instanceof UserNotConnectedError) {
 					let setupUrl;
 					try {
-						let userId = decodeJwt(transports[sessionId!].currentJwt)?.payload
-							.sub as string;
+						const userId = decodeJwt(jwt)?.payload?.sub as string;
 						if (!userId) {
 							throw new Error("User ID not found");
 						}

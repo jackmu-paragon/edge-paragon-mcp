@@ -5,15 +5,13 @@ import { envs } from './config/config';
 // This function can be marked `async` if using `await` inside
 export function proxy(req: NextRequest) {
 	let currentJwt: string | null = req.headers.get("authorization");
-	const user: string | null = (new URLSearchParams(req.url)).get("user");
+	const user: string | null = req.nextUrl.searchParams.get("user");
 
 	const prodAuth: boolean = (currentJwt !== null && currentJwt.startsWith("Bearer "));
+	console.log(envs.NODE_ENV, user);
 	const devAuth: boolean = envs.NODE_ENV === "development" && user !== null;
 
-	if (!prodAuth || !devAuth) return NextResponse.json({ status: 401, message: "Unauthorized" });
+	if (!prodAuth && !devAuth) return NextResponse.json({ status: 401, message: "Unauthorized" });
 }
 
-export const config = {
-	matcher: '*',
-}
-
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.svg).*)'] };

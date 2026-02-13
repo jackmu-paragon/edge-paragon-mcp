@@ -7,7 +7,7 @@ import { readdir, readFile } from "fs/promises";
 import { OpenAPIV3_1 } from "openapi-types";
 import * as path from "path";
 import yaml from "yaml";
-import { ExtendedTool, Integration } from "../types/paragon-types.js";
+import { ExtendedTool, Integration } from "@/types/paragon-types";
 
 export const openApiRequests: Record<
 	string,

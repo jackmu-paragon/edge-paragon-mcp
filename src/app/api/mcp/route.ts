@@ -1,4 +1,5 @@
 import { envs } from "@/config/config";
+import { registerTools } from "@/utils/tools";
 import { signJwt } from "@/utils/util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -16,9 +17,13 @@ const server = new McpServer({
 	}
 });
 
+// Register tool handlers once at module load
+registerTools({ server });
+
 const checkAuth = (req: Request): string | null => {
 	let currentJwt: string | null = req.headers.get("authorization");
-	const user: string | null = (new URLSearchParams(req.url)).get("user");
+	const url = new URL(req.url);
+	const user: string | null = url.searchParams.get("user");
 
 	if (currentJwt && currentJwt.startsWith("Bearer ")) {
 		currentJwt = currentJwt.slice(7).trim();
@@ -50,15 +55,19 @@ export async function GET(req: Request): Promise<Response> {
 	const jwt: string | null = checkAuth(req);
 	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
 
+	const transport = await createTransportAndConnect();
 	try {
-		const transport = await createTransportAndConnect();
-		return await transport.handleRequest(req);
+		return await transport.handleRequest(req, {
+			authInfo: { token: jwt, clientId: "", scopes: [] }
+		});
 	} catch (error) {
 		console.error("Error handling GET request:", error);
 		return Response.json(
 			{ error: "Internal server error" },
 			{ status: 500 }
 		);
+	} finally {
+		await transport.close();
 	}
 }
 
@@ -68,10 +77,13 @@ export async function POST(req: Request): Promise<Response> {
 	const jwt: string | null = checkAuth(req);
 	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
 
+	const transport = await createTransportAndConnect();
 	try {
-		const transport = await createTransportAndConnect();
 		const body = await req.json();
-		return await transport.handleRequest(req, { parsedBody: body });
+		return await transport.handleRequest(req, {
+			parsedBody: body,
+			authInfo: { token: jwt, clientId: "", scopes: [] }
+		});
 	} catch (error) {
 		console.error("Error handling POST request:", error);
 		return Response.json(
@@ -85,6 +97,8 @@ export async function POST(req: Request): Promise<Response> {
 			},
 			{ status: 500 }
 		);
+	} finally {
+		await transport.close();
 	}
 }
 
@@ -94,14 +108,18 @@ export async function DELETE(req: Request): Promise<Response> {
 	const jwt: string | null = checkAuth(req);
 	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
 
+	const transport = await createTransportAndConnect();
 	try {
-		const transport = await createTransportAndConnect();
-		return await transport.handleRequest(req);
+		return await transport.handleRequest(req, {
+			authInfo: { token: jwt, clientId: "", scopes: [] }
+		});
 	} catch (error) {
 		console.error("Error handling DELETE request:", error);
 		return Response.json(
 			{ error: "Internal server error" },
 			{ status: 500 }
 		);
+	} finally {
+		await transport.close();
 	}
 }

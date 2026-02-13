@@ -1,5 +1,6 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+// Note: MCP SDK imports use .js extensions as per their ESM module structure
 
 export interface LinkConnectionProps {
 	userId?: string;

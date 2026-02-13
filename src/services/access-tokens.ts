@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import NodeCache from "node-cache";
-import { MINUTES } from "../utils/util.js";
+import { MINUTES } from "@/utils/util";
 
 let accessTokensById: NodeCache;
 
