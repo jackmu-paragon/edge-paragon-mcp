@@ -1,5 +1,8 @@
+import { envs } from "@/config/config";
+import { signJwt } from "@/utils/util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { NextResponse } from "next/server";
 
 const server = new McpServer({
 	name: "edge-paragon-mcp",
@@ -12,6 +15,20 @@ const server = new McpServer({
 		}
 	}
 });
+
+const checkAuth = (req: Request): string | null => {
+	let currentJwt: string | null = req.headers.get("authorization");
+	const user: string | null = (new URLSearchParams(req.url)).get("user");
+
+	if (currentJwt && currentJwt.startsWith("Bearer ")) {
+		currentJwt = currentJwt.slice(7).trim();
+	} else if (envs.NODE_ENV === "development" && user) {
+		// In development, allow `user=` query parameter to be used
+		currentJwt = signJwt({ userId: user as string });
+	}
+
+	return currentJwt;
+}
 
 async function createTransportAndConnect(): Promise<WebStandardStreamableHTTPServerTransport> {
 	const transport = new WebStandardStreamableHTTPServerTransport({
@@ -30,6 +47,9 @@ async function createTransportAndConnect(): Promise<WebStandardStreamableHTTPSer
 export async function GET(req: Request): Promise<Response> {
 	console.log(`GET Request received: ${req.method} ${req.url}`);
 
+	const jwt: string | null = checkAuth(req);
+	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
+
 	try {
 		const transport = await createTransportAndConnect();
 		return await transport.handleRequest(req);
@@ -44,6 +64,9 @@ export async function GET(req: Request): Promise<Response> {
 
 export async function POST(req: Request): Promise<Response> {
 	console.log(`POST Request received: ${req.method} ${req.url}`);
+
+	const jwt: string | null = checkAuth(req);
+	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
 
 	try {
 		const transport = await createTransportAndConnect();
@@ -67,6 +90,9 @@ export async function POST(req: Request): Promise<Response> {
 
 export async function DELETE(req: Request): Promise<Response> {
 	console.log(`DELETE Request received: ${req.method} ${req.url}`);
+
+	const jwt: string | null = checkAuth(req);
+	if (!jwt) return NextResponse.json({ status: 401, message: "Unauthorized" });
 
 	try {
 		const transport = await createTransportAndConnect();
