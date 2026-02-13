@@ -1,167 +1,81 @@
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
-export async function GET(req: Request) {
-	console.log(`GET Request received: ${req.method} ${req.url}`);
-	const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
-
-	try {
-		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
-		if (!sessionId || !transports[sessionId]) {
-			console.log(`Invalid session ID in GET request: ${sessionId}`);
-			return Response.json({ status: 400, message: "Invalid or missing session ID" });
+const server = new McpServer({
+	name: "edge-paragon-mcp",
+	version: "1.0.0",
+}, {
+	capabilities: {
+		logging: {},
+		tools: {
+			listChanged: true
 		}
-
-		// Check for Last-Event-ID header for resumability
-		const lastEventId = req.headers.get('last-event-id') as string | undefined;
-		if (lastEventId) {
-			console.log(`Client reconnecting with Last-Event-ID: ${lastEventId}`);
-		} else {
-			console.log(`Establishing new SSE stream for session ${sessionId}`);
-		}
-
-		const transport = transports[sessionId];
-
-		console.log(`Starting SSE transport.handleRequest for session ${sessionId}...`);
-		const startTime = Date.now();
-		await transport.handleRequest(req, res);
-		const duration = Date.now() - startTime;
-		console.log(`SSE stream setup completed in ${duration}ms for session: ${sessionId}`);
-	} catch (error) {
-		console.error('Error handling GET request:', error);
-		return Response.json({ status: 500, message: "internal server error" });
 	}
-}
+});
 
-export async function POST(req: Request) {
-	console.log(`Request received: ${req.method} ${req.url}`, { body: req.body });
-	const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+async function createTransportAndConnect(): Promise<WebStandardStreamableHTTPServerTransport> {
+	const transport = new WebStandardStreamableHTTPServerTransport({
+		// No sessionIdGenerator = stateless mode
+		enableJsonResponse: true,
+	});
 
-	// Capture response data for logging
-	const originalJson = res.json;
-	res.json = function(body) {
-		console.log(`Response being sent:`, JSON.stringify(body, null, 2));
-		return originalJson.call(this, body);
+	transport.onclose = () => {
+		console.log("Transport closed");
 	};
 
+	await server.connect(transport);
+	return transport;
+}
+
+export async function GET(req: Request): Promise<Response> {
+	console.log(`GET Request received: ${req.method} ${req.url}`);
+
 	try {
-		// Check for existing session ID
-		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
-		let transport: StreamableHTTPServerTransport;
-
-		if (sessionId && transports[sessionId]) {
-			// Reuse existing transport
-			console.log(`Reusing session: ${sessionId}`);
-			transport = transports[sessionId];
-		} else if (!sessionId && isInitializeRequest(req.body)) {
-			console.log(`New session request: ${req.body.method}`);
-			// New initialization request
-			const eventStore = new InMemoryEventStore();
-			transport = new StreamableHTTPServerTransport({
-				sessionIdGenerator: () => randomUUID(),
-				enableJsonResponse: true,
-				eventStore, // Enable resumability
-				onsessioninitialized: (sessionId) => {
-					// Store the transport by session ID
-					console.log(`Session initialized: ${sessionId}`);
-					transports[sessionId] = transport;
-				}
-			});
-
-			// Clean up transport when closed
-			transport.onclose = () => {
-				const sid = transport.sessionId;
-				if (sid && transports[sid]) {
-					console.log(`Transport closed for session ${sid}, removing from transports map`);
-					delete transports[sid];
-				}
-			};
-
-
-			// Connect to the MCP server BEFORE handling the request
-			console.log(`Connecting transport to MCP server...`);
-			await server.connect(transport);
-			console.log(`Transport connected to MCP server successfully`);
-
-			console.log(`Handling initialization request...`);
-			await transport.handleRequest(req, res, req.body);
-			console.log(`Initialization request handled, response sent`);
-			return; // Already handled
-		} else {
-			console.error('Invalid request: No valid session ID or initialization request');
-			// Invalid request
-			return Response.json({
-				jsonrpc: '2.0',
-				error: {
-					code: -32000,
-					message: 'Bad Request: No valid session ID provided',
-				},
-				id: null,
-			});
-		}
-
-		console.log(`Handling request for session: ${transport.sessionId}`);
-		console.log(`Request body:`, JSON.stringify(req.body, null, 2));
-
-		// Handle the request with existing transport
-		console.log(`Calling transport.handleRequest...`);
-		const startTime = Date.now();
-		await transport.handleRequest(req, res, req.body);
-		const duration = Date.now() - startTime;
-		console.log(`Request handling completed in ${duration}ms for session: ${transport.sessionId}`);
+		const transport = await createTransportAndConnect();
+		return await transport.handleRequest(req);
 	} catch (error) {
-		console.error('Error handling MCP request:', error);
-		if (!res.headersSent) {
-			return Response.json({
-				jsonrpc: '2.0',
-				error: {
-					code: -32603,
-					message: 'Internal server error',
-				},
-				id: null,
-			});
-		}
+		console.error("Error handling GET request:", error);
+		return Response.json(
+			{ error: "Internal server error" },
+			{ status: 500 }
+		);
 	}
 }
 
-export async function DELETE(req: Request) {
-	console.log(`DELETE Request received: ${req.method} ${req.url}`);
-	const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+export async function POST(req: Request): Promise<Response> {
+	console.log(`POST Request received: ${req.method} ${req.url}`);
+
 	try {
-		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
-		if (!sessionId || !transports[sessionId]) {
-			console.log(`Invalid session ID in DELETE request: ${sessionId}`);
-			return Response.json({ status: 400, message: "invalid or missing session ID" });
-			return;
-		}
-
-		console.log(`Received session termination request for session ${sessionId}`);
-		const transport = transports[sessionId];
-
-		// Capture response for logging
-		const originalSend = res.send;
-		res.send = function(body) {
-			console.log(`DELETE response being sent:`, body);
-			return originalSend.call(this, body);
-		};
-
-		console.log(`Processing session termination...`);
-		const startTime = Date.now();
-		await transport.handleRequest(req, res);
-		const duration = Date.now() - startTime;
-		console.log(`Session termination completed in ${duration}ms for session: ${sessionId}`);
-
-		// Check if transport was actually closed
-		setTimeout(() => {
-			if (transports[sessionId]) {
-				console.log(`Note: Transport for session ${sessionId} still exists after DELETE request`);
-			} else {
-				console.log(`Transport for session ${sessionId} successfully removed after DELETE request`);
-			}
-		}, 100);
+		const transport = await createTransportAndConnect();
+		const body = await req.json();
+		return await transport.handleRequest(req, { parsedBody: body });
 	} catch (error) {
-		console.error('Error handling DELETE request:', error);
-		if (!res.headersSent) {
-			return Response.json({ status: 500, message: "error processing delete session" });
-		}
+		console.error("Error handling POST request:", error);
+		return Response.json(
+			{
+				jsonrpc: "2.0",
+				error: {
+					code: -32603,
+					message: "Internal server error",
+				},
+				id: null,
+			},
+			{ status: 500 }
+		);
+	}
+}
+
+export async function DELETE(req: Request): Promise<Response> {
+	console.log(`DELETE Request received: ${req.method} ${req.url}`);
+
+	try {
+		const transport = await createTransportAndConnect();
+		return await transport.handleRequest(req);
+	} catch (error) {
+		console.error("Error handling DELETE request:", error);
+		return Response.json(
+			{ error: "Internal server error" },
+			{ status: 500 }
+		);
 	}
 }
