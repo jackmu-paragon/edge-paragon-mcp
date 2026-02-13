@@ -18,8 +18,7 @@ For a self-hostable **server** implementation, please visit the official [Parago
 
 ## Deploy to your Vercel Account 
 This serverless MCP can be self-hosted and deployed directly to your Vercel account for immediate testing.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjackmu-paragon%2Fedge-paragon-mcp&env=PROJECT_ID,SIGNING_KEY,MCP_SERVER_URL,NODE_ENV,ENABLE_CUSTOM_OPENAPI_ACTIONS,ENABLE_PROXY_API_TOOL,ENABLE_CUSTOM_TOOL&envDefaults=%7B%22NODE_ENV%22%3A%22production%22%2C%22ENABLE_CUSTOM_OPENAPI_ACTIONS%22%3A%22false%22%2C%22ENABLE_PROXY_API_TOOL%22%3A%22false%22%2C%22ENABLE_CUSTOM_TOOL%22%3A%22false%22%7D&project-name=paragon-mcp-serverless&demo-title=Paragon%20MCP%20(serverless))
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjackmu-paragon%2Fedge-paragon-mcp&env=PROJECT_ID,SIGNING_KEY,MCP_SERVER_URL,NODE_ENV,ENABLE_CUSTOM_OPENAPI_ACTIONS,ENABLE_PROXY_API_TOOL,ENABLE_CUSTOM_TOOL&envDefaults=%7B%22MCP_SERVER_URL%22%3A%22REPLACE_WITH_YOUR_DOMAIN%20(may%20have%20to%20replace%20after%20deploying%20if%20you%20don't%20have%20a%20static%20url)%22%2C%22NODE_ENV%22%3A%22production%22%2C%22ENABLE_CUSTOM_OPENAPI_ACTIONS%22%3A%22false%22%2C%22ENABLE_PROXY_API_TOOL%22%3A%22false%22%2C%22ENABLE_CUSTOM_TOOL%22%3A%22false%22%7D&project-name=paragon-mcp-serverless&demo-title=Paragon%20MCP%20(serverless))
 
 ## Features
 
