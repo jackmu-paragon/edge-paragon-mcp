@@ -1,5 +1,10 @@
 import { envs } from "@/config/config";
 import { createAccessTokenStore } from "@/services/access-tokens";
+import { ExtendedTool, Integration } from "@/types/paragon-types";
+import { getAllIntegrations } from "@/utils/actionkit";
+import { getCustomTools } from "@/utils/custom-tools";
+import { loadCustomOpenApiTools } from "@/utils/openapi";
+import { createProxyApiTool } from "@/utils/proxy-api";
 import { registerTools } from "@/utils/tools";
 import { signJwt } from "@/utils/util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -18,7 +23,31 @@ const server = new McpServer({
 	}
 });
 
-registerTools({ server });
+let extraTools: Array<ExtendedTool> = [];
+let integrations: Array<Integration> = await getAllIntegrations(
+	signJwt({ userId: envs.PROJECT_ID })
+);
+if (envs.ENABLE_CUSTOM_OPENAPI_ACTIONS) {
+	extraTools = await loadCustomOpenApiTools(integrations);
+}
+if (envs.ENABLE_PROXY_API_TOOL) {
+	extraTools = extraTools.concat(
+		createProxyApiTool(
+			integrations.filter((i) => {
+				if (envs.LIMIT_TO_INTEGRATIONS) {
+					return envs.LIMIT_TO_INTEGRATIONS.includes(i.type);
+				}
+				return true;
+			})
+		)
+	);
+}
+if (envs.ENABLE_CUSTOM_TOOL) {
+	extraTools = extraTools.concat(getCustomTools());
+}
+console.log(extraTools);
+registerTools({ server, extraTools });
+
 createAccessTokenStore();
 
 const checkAuth = (req: Request): string | null => {
