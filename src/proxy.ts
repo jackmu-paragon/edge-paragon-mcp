@@ -7,8 +7,7 @@ export function proxy(req: NextRequest) {
 	let currentJwt: string | null = req.headers.get("authorization");
 	const user: string | null = req.nextUrl.searchParams.get("user");
 
-	// const prodAuth: boolean = (currentJwt !== null && currentJwt.startsWith("Bearer "));
-	const prodAuth = true;
+	const prodAuth: boolean = (currentJwt !== null && currentJwt.startsWith("Bearer "));
 	const devAuth: boolean = envs.NODE_ENV === "development" && user !== null;
 
 	if (!prodAuth && !devAuth) return NextResponse.json({ status: 401, message: "Unauthorized" });

@@ -55,16 +55,12 @@ const checkAuth = (req: Request): string | null => {
 	const url = new URL(req.url);
 	const user: string | null = url.searchParams.get("user");
 
-	// if (currentJwt && currentJwt.startsWith("Bearer ")) {
-	// 	currentJwt = currentJwt.slice(7).trim();
-	// } else if (envs.NODE_ENV === "development" && user) {
-	// 	// In development, allow `user=` query parameter to be used
-	// 	currentJwt = signJwt({ userId: user as string });
-	// }
-	if (user) {
+	if (currentJwt && currentJwt.startsWith("Bearer ")) {
+		currentJwt = currentJwt.slice(7).trim();
+	} else if (envs.NODE_ENV === "development" && user) {
+		// In development, allow `user=` query parameter to be used
 		currentJwt = signJwt({ userId: user as string });
 	}
-
 	return currentJwt;
 }
 
