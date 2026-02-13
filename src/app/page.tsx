@@ -184,7 +184,7 @@ export default function Home() {
 								<br />
 								<small>
 									<strong>Note</strong>: When <code>NODE_ENV</code> is set to{" "}
-									<code>development</code>, the <code>/sse</code> parameter
+									<code>development</code>, the <code>/mcp</code> parameter
 									accepts any user ID in the <code>?user=</code> query parameter
 									to automatically authorize as a specific user while testing
 									locally.
@@ -232,7 +232,7 @@ export default function Home() {
 					<code>{`{
   "mcpServers": {
     "mcp-actionkit-dev": {
-      "url": "http://localhost:3001/sse?user=[user-id]"
+      "url": "http://localhost:3001/mcp?user=[user-id]"
     }
   }
 }`}</code>
@@ -265,7 +265,7 @@ export default function Home() {
   "mcpServers": {
     "actionkit": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:3001/sse?user=[user-id]"]
+      "args": ["mcp-remote", "http://localhost:3001/mcp?user=[user-id]"]
     }
   }
 }`}</code>

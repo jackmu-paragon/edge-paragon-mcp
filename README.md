@@ -73,7 +73,7 @@ Set up the environment variables as described below:
   - `ZEUS_BASE_URL`: Paragon API base URL (default: https://zeus.useparagon.com)
   - `PROXY_BASE_URL`: Paragon Proxy API base URL (default: https://proxy.useparagon.com)
   - `NODE_ENV`: Node environment (default: `development`)
-    <sub>**Note**: When `NODE_ENV` is set to `development`, the `/sse` parameter accepts any user ID in the `?user=` query parameter to automatically authorize as a specific user while testing locally.</sub>
+    <sub>**Note**: When `NODE_ENV` is set to `development`, the `/mcp` parameter accepts any user ID in the `?user=` query parameter to automatically authorize as a specific user while testing locally.</sub>
 
 ### Running the Server
 
@@ -97,7 +97,7 @@ To use this MCP server with Cursor, add the following to your Cursor configurati
 {
   "mcpServers": {
     "mcp-actionkit-dev": {
-      "url": "http://localhost:3001/sse?user=[user-id]"
+      "url": "http://localhost:3001/mcp?user=[user-id]"
     }
   }
 }
@@ -117,7 +117,7 @@ To use this MCP server with Claude, add the following to your Claude configurati
   "mcpServers": {
     "actionkit": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:3001/sse?user=[user-id]"]
+      "args": ["mcp-remote", "http://localhost:3001/mcp?user=[user-id]"]
     }
   }
 }
