@@ -168,6 +168,7 @@ export function registerTools({
 									: tool.integrationName,
 							userId,
 						});
+						console.log("setup url", setupUrl);
 
 						return {
 							content: [

@@ -1,4 +1,5 @@
 import { envs } from "@/config/config";
+import { createAccessTokenStore } from "@/services/access-tokens";
 import { registerTools } from "@/utils/tools";
 import { signJwt } from "@/utils/util";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -17,8 +18,8 @@ const server = new McpServer({
 	}
 });
 
-// Register tool handlers once at module load
 registerTools({ server });
+createAccessTokenStore();
 
 const checkAuth = (req: Request): string | null => {
 	let currentJwt: string | null = req.headers.get("authorization");
