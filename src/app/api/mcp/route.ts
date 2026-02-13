@@ -5,14 +5,14 @@ export async function GET(req: Request) {
 	const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
 	try {
-		const sessionId = req.headers['mcp-session-id'] as string | undefined;
+		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
 		if (!sessionId || !transports[sessionId]) {
 			console.log(`Invalid session ID in GET request: ${sessionId}`);
 			return Response.json({ status: 400, message: "Invalid or missing session ID" });
 		}
 
 		// Check for Last-Event-ID header for resumability
-		const lastEventId = req.headers['last-event-id'] as string | undefined;
+		const lastEventId = req.headers.get('last-event-id') as string | undefined;
 		if (lastEventId) {
 			console.log(`Client reconnecting with Last-Event-ID: ${lastEventId}`);
 		} else {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
 	try {
 		// Check for existing session ID
-		const sessionId = req.headers['mcp-session-id'] as string | undefined;
+		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
 		let transport: StreamableHTTPServerTransport;
 
 		if (sessionId && transports[sessionId]) {
@@ -127,10 +127,10 @@ export async function DELETE(req: Request) {
 	console.log(`DELETE Request received: ${req.method} ${req.url}`);
 	const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 	try {
-		const sessionId = req.headers['mcp-session-id'] as string | undefined;
+		const sessionId = req.headers.get('mcp-session-id') as string | undefined;
 		if (!sessionId || !transports[sessionId]) {
 			console.log(`Invalid session ID in DELETE request: ${sessionId}`);
-			res.status(400).send('Invalid or missing session ID');
+			return Response.json({ status: 400, message: "invalid or missing session ID" });
 			return;
 		}
 
@@ -161,7 +161,7 @@ export async function DELETE(req: Request) {
 	} catch (error) {
 		console.error('Error handling DELETE request:', error);
 		if (!res.headersSent) {
-			res.status(500).send('Error processing session termination');
+			return Response.json({ status: 500, message: "error processing delete session" });
 		}
 	}
 }
